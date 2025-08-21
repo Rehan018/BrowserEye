@@ -16,6 +16,7 @@ export default defineConfig({
 				background: "./src/lib/background.ts",
 				content: "./src/lib/content.ts",
 				"search-content": "./src/lib/search-content.ts",
+				"intelligence-content": "./src/lib/intelligence-content.ts",
 			},
 			output: {
 				entryFileNames: (chunkInfo) => {
@@ -27,6 +28,9 @@ export default defineConfig({
 					}
 					if (chunkInfo.name === "search-content") {
 						return "search-content.js";
+					}
+					if (chunkInfo.name === "intelligence-content") {
+						return "intelligence-content.js";
 					}
 					return "[name].js";
 				},
@@ -46,6 +50,10 @@ export default defineConfig({
 						const searchScript = bundle["search-content.js"];
 						if (searchScript && searchScript.type === "chunk") {
 							searchScript.code = `(function() {\n'use strict';\n${searchScript.code}\n})();`;
+						}
+						const intelligenceScript = bundle["intelligence-content.js"];
+						if (intelligenceScript && intelligenceScript.type === "chunk") {
+							intelligenceScript.code = `(function() {\n'use strict';\n${intelligenceScript.code}\n})();`;
 						}
 					},
 				},

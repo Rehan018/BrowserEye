@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Brain, Target } from "lucide-react";
 import { DynamicAgent } from "../../lib/agentic/dynamic-agent";
 import type { ExecutionResult } from "../../lib/agentic/dynamic-agent";
+import { PageInsights } from "../intelligence/PageInsights";
 import { useAppSettings } from "../../contexts/AppSettingsContext";
 import { useTabContext } from "../../contexts/TabContext";
 import { agenticAgent } from "../../lib/agentic-agent-instance";
@@ -13,11 +14,35 @@ interface DynamicAgentPanelProps {
 export const DynamicAgentPanel = ({ onGoalUpdate }: DynamicAgentPanelProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<ExecutionResult | null>(null);
+  const [pageContent, setPageContent] = useState('');
 
   const { settings } = useAppSettings();
   const { contextUrl, contextTitle } = useTabContext();
   
   const agent = new DynamicAgent();
+
+  useEffect(() => {
+    // Get page content for analysis
+    if (contextUrl) {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]?.id) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            type: 'GET_PAGE_CONTENT_FOR_ANALYSIS'
+          });
+        }
+      });
+    }
+
+    // Listen for page content
+    const handleMessage = (message: any) => {
+      if (message.type === 'PAGE_CONTENT_EXTRACTED') {
+        setPageContent(message.data.content);
+      }
+    };
+
+    chrome.runtime.onMessage.addListener(handleMessage);
+    return () => chrome.runtime.onMessage.removeListener(handleMessage);
+  }, [contextUrl]);
 
   const handleUserRequest = async (request: string) => {
     if (!settings || !request.trim()) return;
@@ -141,6 +166,13 @@ export const DynamicAgentPanel = ({ onGoalUpdate }: DynamicAgentPanelProps) => {
         </div>
       )}
 
+      {/* Page Intelligence */}
+      {contextUrl && pageContent && (
+        <PageInsights 
+          content={pageContent} 
+          url={contextUrl} 
+        />
+      )}
 
     </div>
   );

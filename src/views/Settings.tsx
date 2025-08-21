@@ -2,6 +2,7 @@ import { CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import ModelSelector from "../components/ModelSelector";
 import { SearchSettings } from "../components/search/SearchSettings";
+import { SmartHighlighter } from "../components/intelligence/SmartHighlighter";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Select from "../components/ui/Select";
@@ -195,6 +196,12 @@ const Settings = () => {
 			<div className="mt-6 border-t border-gray-300 pt-4">
 				<h2 className="text-md font-bold mb-4">Search Enhancement</h2>
 				<SearchSettings />
+			</div>
+
+			{/* Intelligence Settings */}
+			<div className="mt-6 border-t border-gray-300 pt-4">
+				<h2 className="text-md font-bold mb-4">Page Intelligence</h2>
+				<SmartHighlighter />
 			</div>
 
 			<div className="mt-6 border-t border-gray-300 pt-4">
