@@ -249,6 +249,11 @@ export class AgenticAgent extends Agent {
 		return this.currentGoal;
 	}
 
+	setCurrentGoal(goal: AgenticGoal): void {
+		this.currentGoal = goal;
+		this.autonomousActionCount = 0;
+	}
+
 	clearCurrentGoal(): void {
 		this.currentGoal = null;
 		this.autonomousActionCount = 0;

@@ -352,7 +352,18 @@ Title:`;
 							onToggleAutonomous={toggleAutonomousMode}
 							onClearGoal={clearGoal}
 						/>
-						<DynamicAgentPanel />
+						<DynamicAgentPanel onGoalUpdate={(goal) => {
+							// Update the agentic agent's current goal
+							agenticAgent.setCurrentGoal({
+								id: crypto.randomUUID(),
+								objective: goal,
+								priority: 'medium',
+								progress: 0,
+								status: 'executing',
+								createdAt: new Date(),
+								subTasks: []
+							});
+						}} />
 					</>
 				)}
 

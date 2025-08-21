@@ -4,8 +4,13 @@ import { DynamicAgent } from "../../lib/agentic/dynamic-agent";
 import type { ExecutionResult } from "../../lib/agentic/dynamic-agent";
 import { useAppSettings } from "../../contexts/AppSettingsContext";
 import { useTabContext } from "../../contexts/TabContext";
+import { agenticAgent } from "../../lib/agentic-agent-instance";
 
-export const DynamicAgentPanel = () => {
+interface DynamicAgentPanelProps {
+  onGoalUpdate?: (goal: string) => void;
+}
+
+export const DynamicAgentPanel = ({ onGoalUpdate }: DynamicAgentPanelProps) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<ExecutionResult | null>(null);
 
@@ -33,6 +38,22 @@ export const DynamicAgentPanel = () => {
         apiKey: settings.apiKeys[settings.selectedProvider],
         customUrl: settings.customUrls?.[settings.selectedProvider],
       };
+      
+      // Update current goal
+      if (onGoalUpdate) {
+        onGoalUpdate(request);
+      } else {
+        // Fallback: update agentic agent goal
+        agenticAgent.setCurrentGoal({
+          id: crypto.randomUUID(),
+          objective: request,
+          priority: 'medium',
+          progress: 0,
+          status: 'executing',
+          createdAt: new Date(),
+          subTasks: []
+        });
+      }
       
       const executionResult = await agent.processUserRequest(request, context, llmOptions);
       setResult(executionResult);
