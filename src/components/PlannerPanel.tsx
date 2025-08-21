@@ -88,13 +88,13 @@ const PlannerPanel: React.FC<PlannerPanelProps> = ({ steps }) => {
 									isThinking={step.type === "thinking"}
 								/>
 
-								{step.toolResult && (
+								{step.toolResult ? (
 									<div className="mt-2 text-xs text-gray-500">
 										<pre className="whitespace-pre-wrap bg-gray-50 p-2 rounded-md border max-h-40 overflow-y-auto">
 											{formatToolResult(step.toolResult)}
 										</pre>
 									</div>
-								)}
+								) : null}
 							</div>
 						</div>
 					))}

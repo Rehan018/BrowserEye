@@ -19,7 +19,7 @@ const mockTools: Tool[] = [
 ];
 
 const mockToolHandlers = {
-	testTool: async (args: any) => `Executed with: ${args.input}`,
+	testTool: async (args: unknown) => `Executed with: ${(args as { input: string }).input}`,
 };
 
 describe("AgenticAgent", () => {

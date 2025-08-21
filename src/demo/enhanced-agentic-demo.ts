@@ -258,7 +258,7 @@ export class EnhancedAgenticDemo {
 				console.log(`      Generated ${goal.subTasks.length} tasks`);
 
 				const webAwareTasks = goal.subTasks.filter(
-					(task) => task.metadata && task.metadata.webAware,
+					(task) => task.metadata?.webAware,
 				);
 				console.log(`      Web-aware tasks: ${webAwareTasks.length}`);
 

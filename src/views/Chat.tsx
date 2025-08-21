@@ -325,8 +325,10 @@ Title:`;
 				{/* Agentic Mode Toggle */}
 				<div className="mb-4 flex items-center justify-between">
 					<div className="flex items-center gap-2">
-						<label className="text-sm font-medium">Agentic Mode:</label>
+						<label htmlFor="agentic-mode" className="text-sm font-medium">Agentic Mode:</label>
 						<button
+						id="agentic-mode"
+						type="button"
 							onClick={() => setUseAgenticMode(!useAgenticMode)}
 							className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
 								useAgenticMode

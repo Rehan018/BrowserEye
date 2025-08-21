@@ -126,7 +126,7 @@ export const useAgenticAgent = (
 		const memory = agent.getMemorySystem();
 		// Could return memory statistics, recent learnings, etc.
 		return {
-			totalMemories: memory["memories"]?.size || 0,
+			totalMemories: (memory as any).memories?.size || 0,
 			// Add more insights as needed
 		};
 	};

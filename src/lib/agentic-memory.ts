@@ -115,7 +115,8 @@ export class AgenticMemorySystem {
 			});
 		}
 
-		const webMemory = this.webContextMemories.get(domainKey)!;
+		const webMemory = this.webContextMemories.get(domainKey);
+		if (!webMemory) return;
 
 		if (success) {
 			webMemory.successfulActions.push({

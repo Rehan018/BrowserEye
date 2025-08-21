@@ -168,7 +168,7 @@ export class AgenticAgent extends Agent {
 		// Update task statuses based on tool results
 		if (response.toolResults) {
 			response.toolResults.forEach((result) => {
-				const task = this.currentGoal!.subTasks.find((t) =>
+				const task = this.currentGoal?.subTasks.find((t) =>
 					t.toolCalls.includes(result.name),
 				);
 

@@ -166,7 +166,15 @@ export class AgenticPlanner {
 	} {
 		// Enhanced dynamic analysis with web context awareness
 		const sentences = this.splitIntoActionableUnits(objective);
-		const actions: any[] = [];
+		const actions: Array<{
+			type: string;
+			description: string;
+			tools: string[];
+			intent: string;
+			entities: string[];
+			confidence: number;
+			webAware: boolean;
+		}> = [];
 
 		for (const sentence of sentences) {
 			const analysis = this.analyzeIntentWithContext(sentence, context);
@@ -189,7 +197,7 @@ export class AgenticPlanner {
 				objective,
 				context,
 			);
-			actions.push(webAwareAction);
+			actions.push(webAwareAction as any);
 		}
 
 		// Add web-specific actions based on context
@@ -198,7 +206,7 @@ export class AgenticPlanner {
 				objective,
 				context.webContext,
 			);
-			actions.push(...webActions);
+			actions.push(...(webActions as any[]));
 		}
 
 		return { actions };
@@ -545,7 +553,15 @@ export class AgenticPlanner {
 	private createWebAwareExploratoryAction(
 		objective: string,
 		context: TaskExecutionContext,
-	): any {
+	): {
+		type: string;
+		description: string;
+		tools: string[];
+		intent: string;
+		entities: string[];
+		confidence: number;
+		webAware: boolean;
+	} {
 		const webContext = context.webContext;
 
 		return {
@@ -566,8 +582,24 @@ export class AgenticPlanner {
 	private generateWebSpecificActions(
 		objective: string,
 		webContext: WebContext,
-	): any[] {
-		const actions: any[] = [];
+	): Array<{
+		type: string;
+		description: string;
+		tools: string[];
+		intent: string;
+		entities: string[];
+		confidence: number;
+		webAware: boolean;
+	}> {
+		const actions: Array<{
+			type: string;
+			description: string;
+			tools: string[];
+			intent: string;
+			entities: string[];
+			confidence: number;
+			webAware: boolean;
+		}> = [];
 		const lowerObjective = objective.toLowerCase();
 		const url = webContext.url?.toLowerCase() || "";
 		const title = webContext.title?.toLowerCase() || "";

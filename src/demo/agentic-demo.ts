@@ -36,7 +36,7 @@ export async function runAgenticDemo() {
 		console.log("Goal created:", response1.currentGoal?.objective);
 		console.log("Tasks:", response1.currentGoal?.subTasks.length);
 		console.log("Status:", response1.currentGoal?.status);
-		console.log("Progress:", response1.currentGoal?.progress + "%\n");
+		console.log("Progress:", `${response1.currentGoal?.progress}%\n`);
 	} catch (error) {
 		console.error("Demo 1 failed:", error);
 	}
@@ -161,7 +161,7 @@ export async function runInteractiveDemo(scenario: string) {
 		console.log("Scenario Results:");
 		console.log("- Goal:", response.currentGoal?.objective);
 		console.log("- Status:", response.currentGoal?.status);
-		console.log("- Progress:", response.currentGoal?.progress + "%");
+		console.log("- Progress:", `${response.currentGoal?.progress}%`);
 		console.log(
 			"- Tasks completed:",
 			response.currentGoal?.subTasks.filter((t) => t.status === "completed")

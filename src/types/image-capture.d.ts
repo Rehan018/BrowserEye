@@ -1,8 +1,8 @@
 interface ImageCapture {
 	grabFrame(): Promise<ImageBitmap>;
-	getPhotoCapabilities(): Promise<any>;
-	getPhotoSettings(): Promise<any>;
-	takePhoto(photoSettings?: any): Promise<Blob>;
+	getPhotoCapabilities(): Promise<unknown>;
+	getPhotoSettings(): Promise<unknown>;
+	takePhoto(photoSettings?: unknown): Promise<Blob>;
 	readonly track: MediaStreamTrack;
 }
 

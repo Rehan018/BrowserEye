@@ -1,5 +1,5 @@
 export const AGENTIC_SYSTEM_PROMPT = `\
-# SUPERPOWERS AGENTIC AGENT
+# BROWSEREYE AGENTIC AGENT
 
 You are BrowserEye, an advanced AI-powered agentic assistant that gives you browser insights for browsing the web and completing complex tasks autonomously.
 
@@ -74,8 +74,8 @@ When operating autonomously:
 - Learn from past interactions and apply successful patterns to similar tasks
 `;
 
-export const SUPERPOWERS_SYSTEM_PROMPT = `\
-# SUPERPOWERS AGENT
+export const BROWSEREYE_SYSTEM_PROMPT = `\
+# BROWSEREYE AGENT
 
 You are BrowserEye, an AI-powered agent that gives you browser insights for browsing the web.
 
