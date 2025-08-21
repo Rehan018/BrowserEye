@@ -1,21 +1,17 @@
 import { Agent } from './agent';
-import { getBrowserTools } from './browser-tools';
-import type { LLMProvider } from '../types/llm';
-import type { AppSettings } from '../types/settings';
+import { browserTools } from './browser-tools';
+import { browserHandlers } from './browser-handlers';
+import type { AppSettings } from '../types';
 
 let agentInstance: Agent | null = null;
 
-export function createAgentInstance(settings: AppSettings): Agent {
-  const tools = getBrowserTools();
-  
-  const llmConfig: LLMProvider = {
-    provider: settings.provider,
-    apiKey: settings.apiKey,
-    model: settings.model,
-    baseUrl: settings.baseUrl,
-  };
-
-  agentInstance = new Agent(tools, llmConfig);
+export function createAgentInstance(_settings: AppSettings): Agent {
+  agentInstance = new Agent({
+    tools: Object.values(browserTools),
+    toolHandlers: browserHandlers,
+    systemPrompt: "You are BrowserEye, an AI-powered browser automation assistant.",
+    maxIterations: 10,
+  });
   return agentInstance;
 }
 
@@ -29,3 +25,10 @@ export function destroyAgentInstance(): void {
     agentInstance = null;
   }
 }
+
+// Export agent instance for backward compatibility
+export const agent = {
+  createInstance: createAgentInstance,
+  getInstance: getAgentInstance,
+  destroy: destroyAgentInstance,
+};

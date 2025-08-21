@@ -9,7 +9,8 @@ import { useAppSettings } from "../contexts/AppSettingsContext";
 import { useTabContext } from "../contexts/TabContext";
 import { useAgent } from "../hooks/useAgent";
 import { useAgenticAgent } from "../hooks/useAgenticAgent";
-import { agent } from "../lib/agent-instance";
+import { getAgentInstance } from "../lib/agent-instance";
+import { Agent } from "../lib/agent";
 import { agenticAgent } from "../lib/agentic-agent-instance";
 import {
 	handleModelCommand,
@@ -46,7 +47,7 @@ const Chat = () => {
 
 	const [useAgenticMode, setUseAgenticMode] = useState(false);
 
-	const { isLoading, error, runAgent, stopAgent } = useAgent(agent, {
+	const { isLoading, error, runAgent, stopAgent } = useAgent(getAgentInstance() || new Agent(), {
 		onMessage: (content) => {
 			updateLastMessage({ content });
 		},
