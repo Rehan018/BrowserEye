@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Brain, Zap, Target } from "lucide-react";
+import { Brain, Target } from "lucide-react";
 import { DynamicAgent } from "../../lib/agentic/dynamic-agent";
 import type { ExecutionResult } from "../../lib/agentic/dynamic-agent";
 import { useAppSettings } from "../../contexts/AppSettingsContext";
@@ -8,7 +8,7 @@ import { useTabContext } from "../../contexts/TabContext";
 export const DynamicAgentPanel = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<ExecutionResult | null>(null);
-  const [capabilities, setCapabilities] = useState<string[]>([]);
+
   const { settings } = useAppSettings();
   const { contextUrl, contextTitle } = useTabContext();
   
@@ -37,9 +37,7 @@ export const DynamicAgentPanel = () => {
       const executionResult = await agent.processUserRequest(request, context, llmOptions);
       setResult(executionResult);
       
-      // Update capabilities after execution
-      const newCapabilities = await agent.suggestCapabilities();
-      setCapabilities(newCapabilities);
+
       
     } catch (error) {
       setResult({
@@ -52,14 +50,7 @@ export const DynamicAgentPanel = () => {
     }
   };
 
-  const loadCapabilities = async () => {
-    try {
-      const caps = await agent.suggestCapabilities();
-      setCapabilities(caps);
-    } catch (error) {
-      console.error("Failed to load capabilities:", error);
-    }
-  };
+
 
   return (
     <div className="p-4 space-y-4">
@@ -67,35 +58,10 @@ export const DynamicAgentPanel = () => {
       <div className="flex items-center gap-2 mb-4">
         <Brain className="w-5 h-5 text-blue-600" />
         <h3 className="font-semibold text-gray-900">Dynamic AI Agent</h3>
-        <button
-          onClick={loadCapabilities}
-          className="ml-auto text-sm text-blue-600 hover:text-blue-800"
-        >
-          Scan Capabilities
-        </button>
+
       </div>
 
-      {/* Capabilities Display */}
-      {capabilities.length > 0 && (
-        <div className="bg-blue-50 p-3 rounded-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <Zap className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-900">Available Capabilities</span>
-          </div>
-          <div className="space-y-1">
-            {capabilities.slice(0, 3).map((cap, index) => (
-              <div key={index} className="text-xs text-blue-700 bg-blue-100 px-2 py-1 rounded">
-                {cap}
-              </div>
-            ))}
-            {capabilities.length > 3 && (
-              <div className="text-xs text-blue-600">
-                +{capabilities.length - 3} more capabilities
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 gap-2">
@@ -154,16 +120,7 @@ export const DynamicAgentPanel = () => {
         </div>
       )}
 
-      {/* Example Requests */}
-      <div className="text-xs text-gray-500">
-        <p className="font-medium mb-1">Try saying:</p>
-        <ul className="space-y-1">
-          <li>"Send an email to John about the meeting"</li>
-          <li>"Find the best price for iPhone 15"</li>
-          <li>"Schedule a meeting for next week"</li>
-          <li>"Help me fill out this form"</li>
-        </ul>
-      </div>
+
     </div>
   );
 };
