@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AgenticPanel } from "../components/AgenticPanel";
+import { DynamicAgentPanel } from "../components/agentic/DynamicAgentPanel";
 import ChatMessage from "../components/ChatMessage";
 import ContextRibbon from "../components/ContextRibbon";
 import EmptyState from "../components/EmptyState";
@@ -344,12 +345,15 @@ Title:`;
 
 				{/* Agentic Goal Panel */}
 				{useAgenticMode && (
-					<AgenticPanel
-						goal={currentGoal}
-						autonomousMode={autonomousMode}
-						onToggleAutonomous={toggleAutonomousMode}
-						onClearGoal={clearGoal}
-					/>
+					<>
+						<AgenticPanel
+							goal={currentGoal}
+							autonomousMode={autonomousMode}
+							onToggleAutonomous={toggleAutonomousMode}
+							onClearGoal={clearGoal}
+						/>
+						<DynamicAgentPanel />
+					</>
 				)}
 
 				{currentMessages.length === 0 && !(isLoading || isAgenticLoading) ? (
