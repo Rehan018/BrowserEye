@@ -15,6 +15,7 @@ export default defineConfig({
 				main: "./sidebar.html",
 				background: "./src/lib/background.ts",
 				content: "./src/lib/content.ts",
+				"search-content": "./src/lib/search-content.ts",
 			},
 			output: {
 				entryFileNames: (chunkInfo) => {
@@ -23,6 +24,9 @@ export default defineConfig({
 					}
 					if (chunkInfo.name === "content") {
 						return "content.js";
+					}
+					if (chunkInfo.name === "search-content") {
+						return "search-content.js";
 					}
 					return "[name].js";
 				},
@@ -34,10 +38,14 @@ export default defineConfig({
 				{
 					name: "wrap-content-script",
 					generateBundle(_options, bundle) {
-						// Find the content script and wrap it in IIFE
+						// Find content scripts and wrap them in IIFE
 						const contentScript = bundle["content.js"];
 						if (contentScript && contentScript.type === "chunk") {
 							contentScript.code = `(function() {\n'use strict';\n${contentScript.code}\n})();`;
+						}
+						const searchScript = bundle["search-content.js"];
+						if (searchScript && searchScript.type === "chunk") {
+							searchScript.code = `(function() {\n'use strict';\n${searchScript.code}\n})();`;
 						}
 					},
 				},

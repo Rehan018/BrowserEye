@@ -3,9 +3,17 @@ import type { BrowserActionResult } from "../types/browser";
 import { browserActions } from "./browser-actions";
 import { listenForConnections } from "./llm-service";
 import initSidebar from "./sidebar";
+import { SearchManager } from "./search/search-manager";
 
 listenForConnections();
 initSidebar();
+
+// Initialize search interception
+const searchManager = new SearchManager();
+
+// Initialize cross-tab manager
+import { CrossTabManager } from "./memory/cross-tab-manager";
+new CrossTabManager();
 
 // Combined message listener
 chrome.runtime.onMessage.addListener(
@@ -25,6 +33,54 @@ chrome.runtime.onMessage.addListener(
 		}
 
 		switch (type) {
+			case "TOGGLE_SEARCH_INTERCEPTION":
+				if (data.enabled) {
+					searchManager.enable();
+				} else {
+					searchManager.disable();
+				}
+				sendResponse({ success: true });
+				return true;
+
+			case "SCRAPE_SEARCH_RESULTS":
+				(async () => {
+					try {
+						// Simple mock implementation - in production, use proper scraping
+						const mockResults = [
+							{
+								title: `Search result for: ${data.query}`,
+								url: `https://example.com/search?q=${encodeURIComponent(data.query)}`,
+								snippet: `This is a mock search result for the query: ${data.query}`,
+								source: 'Mock Source'
+							}
+						];
+						sendResponse({ results: mockResults });
+					} catch (error) {
+						sendResponse({ error: (error as Error).message });
+					}
+				})();
+				return true;
+
+			case "SCRAPE_WEBPAGE":
+				(async () => {
+					try {
+						const response = await fetch(data.url);
+						const html = await response.text();
+						
+						// Extract title and basic content
+						const titleMatch = html.match(/<title>(.*?)<\/title>/i);
+						const title = titleMatch ? titleMatch[1] : 'No title';
+						
+						// Simple content extraction (remove HTML tags)
+						const content = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+						
+						sendResponse({ title, content: content.substring(0, 5000) });
+					} catch (error) {
+						sendResponse({ error: (error as Error).message });
+					}
+				})();
+				return true;
+
 			case "FETCH_REQUEST":
 				(async () => {
 					try {

@@ -1,6 +1,8 @@
 import { Trash2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import MarkdownRenderer from "../components/MarkdownRenderer";
+import { ConversationHistory } from "../components/memory/ConversationHistory";
+import { ProjectManager } from "../components/memory/ProjectManager";
 import Popup from "../components/ui/Popup";
 import { useViewContext } from "../contexts/ViewContext";
 import type { Conversation } from "../lib/store";
@@ -83,7 +85,20 @@ const History = () => {
 					Clear History
 				</button>
 			</div>
+			{/* New Memory System */}
+			<div className="border-b border-gray-200 mb-4">
+				<div className="px-4 pb-4">
+					<h2 className="text-sm font-semibold text-gray-700 mb-3">Projects & Sessions</h2>
+					<div className="space-y-4">
+						<ProjectManager />
+						<ConversationHistory />
+					</div>
+				</div>
+			</div>
+
+			{/* Legacy History */}
 			<div className="px-4 space-y-2 overflow-y-auto flex-grow mb-4">
+				<h2 className="text-sm font-semibold text-gray-700 mb-3">Legacy Conversations</h2>
 				{conversations.length > 0 ? (
 					conversations.map((conversation, index) => (
 						<button

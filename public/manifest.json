@@ -9,7 +9,8 @@
 		"contextMenus",
 		"activeTab",
 		"scripting",
-		"webNavigation"
+		"webNavigation",
+		"tabs"
 	],
 	"host_permissions": [
 		"<all_urls>",
@@ -23,7 +24,7 @@
 	"content_scripts": [
 		{
 			"matches": ["<all_urls>"],
-			"js": ["content.js"],
+			"js": ["content.js", "search-content.js"],
 			"run_at": "document_idle"
 		}
 	],
