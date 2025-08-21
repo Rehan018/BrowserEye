@@ -1,7 +1,7 @@
 {
 	"manifest_version": 3,
 	"name": "BrowserEye",
-	"description": "A sidebar which gives you browser insights",
+	"description": "AI-powered browser automation assistant by Rehan Alam",
 	"version": "0.0.48",
 	"permissions": [
 		"sidePanel",
