@@ -1,0 +1,440 @@
+import { useEffect, useRef, useState } from "react";
+import { AgenticPanel } from "../components/AgenticPanel";
+import ChatMessage from "../components/ChatMessage";
+import ContextRibbon from "../components/ContextRibbon";
+import EmptyState from "../components/EmptyState";
+import PlannerPanel from "../components/PlannerPanel";
+import PromptBox from "../components/PromptInput";
+import { useAppSettings } from "../contexts/AppSettingsContext";
+import { useTabContext } from "../contexts/TabContext";
+import { useAgent } from "../hooks/useAgent";
+import { useAgenticAgent } from "../hooks/useAgenticAgent";
+import { agent } from "../lib/agent-instance";
+import { agenticAgent } from "../lib/agentic-agent-instance";
+import {
+	handleModelCommand,
+	type ModelCommandResult,
+} from "../lib/modelCommand";
+import { PROMPTS } from "../lib/prompts";
+import { TOOL_CALL_JSON_CODE_BLOCK_REGEX } from "../lib/regex";
+import { useConversationStore } from "../lib/store";
+import type { PlannerStep } from "../lib/streaming-tool-parser";
+import { fileToDataURL, readStream } from "../lib/utils";
+import { streamLlm } from "../services/llm";
+import type { LLMMessage } from "../types";
+import type { AgentMessage } from "../types/agent";
+import { PROVIDERS } from "../utils/providers";
+
+const Chat = () => {
+	const [inputValue, setInputValue] = useState("");
+	const { contextUrl, contextTitle, contextTabId } = useTabContext();
+	const [currentPlannerSteps, setCurrentPlannerSteps] = useState<PlannerStep[]>(
+		[],
+	);
+
+	const { settings, setSettings } = useAppSettings();
+	const {
+		conversations,
+		currentConversationId,
+		validationError,
+		addMessages,
+		updateLastMessage,
+		setConversationTitle,
+		startConversation,
+		setValidationError,
+	} = useConversationStore();
+
+	const [useAgenticMode, setUseAgenticMode] = useState(false);
+
+	const { isLoading, error, runAgent, stopAgent } = useAgent(agent, {
+		onMessage: (content) => {
+			updateLastMessage({ content });
+		},
+		onComplete: (response) => {
+			// Clean up the message content by removing the raw tool call JSON
+			const finalMessage = response.message
+				.replace(TOOL_CALL_JSON_CODE_BLOCK_REGEX, "")
+				.trim();
+			updateLastMessage({
+				content: finalMessage,
+				toolCalls: response.toolCalls,
+				toolResults: response.toolResults,
+			});
+			setCurrentPlannerSteps([]);
+		},
+		onPlannerUpdate: (steps) => {
+			setCurrentPlannerSteps(steps);
+		},
+	});
+
+	const {
+		isLoading: isAgenticLoading,
+		error: agenticError,
+		runAgenticAgent,
+		stopAgent: stopAgenticAgent,
+		currentGoal,
+		autonomousMode,
+		clearGoal,
+		toggleAutonomousMode,
+	} = useAgenticAgent(agenticAgent, {
+		onMessage: (content) => {
+			updateLastMessage({ content });
+		},
+		onComplete: (response) => {
+			const finalMessage = response.message
+				.replace(TOOL_CALL_JSON_CODE_BLOCK_REGEX, "")
+				.trim();
+			updateLastMessage({
+				content: finalMessage,
+				toolCalls: response.toolCalls,
+				toolResults: response.toolResults,
+			});
+			setCurrentPlannerSteps([]);
+		},
+		onPlannerUpdate: (steps) => {
+			setCurrentPlannerSteps(steps);
+		},
+	});
+
+	const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+	const currentMessages = currentConversationId
+		? conversations[currentConversationId]?.messages || []
+		: [];
+
+	const scrollToBottom = () => {
+		messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+	};
+
+	// biome-ignore lint/correctness/useExhaustiveDependencies: This effect runs on mount and when messages change
+	useEffect(() => {
+		scrollToBottom();
+	}, [currentMessages]);
+
+	const handleSubmit = async (images?: File[]) => {
+		if (!settings || !settings.selectedProvider || !settings.model) {
+			setValidationError("Please select a provider and model in settings.");
+			return;
+		}
+
+		const provider = PROVIDERS[settings.selectedProvider];
+		if (
+			provider.requiresApiKey &&
+			!settings.apiKeys[settings.selectedProvider]
+		) {
+			setValidationError(
+				`Please enter an API key for ${provider.label} in settings.`,
+			);
+			return;
+		}
+		setValidationError(null);
+
+		setCurrentPlannerSteps([]);
+
+		const attachments = await Promise.all(
+			(images || []).map(async (file) => {
+				const { mediaType, data } = await fileToDataURL(file);
+				return {
+					id: crypto.randomUUID(),
+					type: "image" as const,
+					mediaType,
+					data,
+				};
+			}),
+		);
+
+		const userMessage = {
+			id: crypto.randomUUID(),
+			role: "user" as const,
+			content: inputValue,
+			attachments,
+		};
+
+		if (inputValue.startsWith("/")) {
+			const [command, ...args] = inputValue.slice(1).split(" ");
+
+			// Handle model command specially
+			if (command === "model") {
+				const action = args.join(" ");
+
+				try {
+					const result: ModelCommandResult = await handleModelCommand(
+						action,
+						settings,
+						setSettings,
+					);
+
+					// Add user's command to conversation
+					if (!currentConversationId) {
+						startConversation(userMessage);
+					} else {
+						addMessages([userMessage]);
+					}
+
+					// Add system response
+					const systemMessage: AgentMessage = {
+						id: crypto.randomUUID(),
+						role: "assistant",
+						content: result.message,
+					};
+
+					addMessages([systemMessage]);
+
+					// If model changed, show a brief confirmation
+					if (result.modelChanged && result.newModel) {
+						console.log(`Model switched to: ${result.newModel}`);
+					}
+				} catch (error) {
+					console.error("Model command error:", error);
+
+					// Add error message to conversation
+					if (!currentConversationId) {
+						startConversation(userMessage);
+					} else {
+						addMessages([userMessage]);
+					}
+
+					const errorMessage: AgentMessage = {
+						id: crypto.randomUUID(),
+						role: "assistant",
+						content: `Error: ${error instanceof Error ? error.message : "Unknown error"}`,
+					};
+
+					addMessages([errorMessage]);
+				}
+
+				setInputValue("");
+				return;
+			}
+
+			const prompt = PROMPTS.find((p) => p.name === command);
+
+			if (prompt) {
+				// Add user's slash command to the conversation
+				if (!currentConversationId) {
+					startConversation(userMessage);
+				} else {
+					addMessages([userMessage]);
+				}
+
+				const messages = await prompt.getMessages({ text: args.join(" ") });
+
+				if (prompt.llmTrigger) {
+					// For LLM triggers, add an empty assistant message and run the agent
+					addMessages([
+						{
+							id: crypto.randomUUID(),
+							role: "assistant",
+							content: "",
+						},
+					]);
+					const history = [...currentMessages, userMessage, ...messages];
+					const llmOptions = {
+						provider: settings.selectedProvider,
+						model: settings.model,
+						apiKey: settings.apiKeys[settings.selectedProvider],
+						attachments,
+						customUrl: settings.customUrls?.[settings.selectedProvider],
+					};
+					const context = {
+						url: contextUrl,
+						title: contextTitle,
+						id: contextTabId,
+					};
+
+					if (useAgenticMode) {
+						runAgenticAgent(history, llmOptions, context, autonomousMode);
+					} else {
+						runAgent(history, llmOptions, context);
+					}
+				} else {
+					// For direct responses, just add the message from the prompt
+					addMessages(messages);
+				}
+
+				setInputValue("");
+				return;
+			}
+		}
+
+		if (!currentConversationId) {
+			const newConversationId = startConversation(userMessage);
+			addMessages([
+				{
+					id: crypto.randomUUID(),
+					role: "assistant" as const,
+					content: "",
+				},
+			]);
+
+			// Generate title in the background
+			(async () => {
+				const titlePrompt = `Based on the following user query, create a short, descriptive title (3-5 words) for the conversation.
+
+User Query: "${inputValue}"
+
+Title:`;
+				const titleLlmMessages: LLMMessage[] = [
+					{ role: "user", content: titlePrompt },
+				];
+				try {
+					const stream = streamLlm(titleLlmMessages, {
+						provider: settings.selectedProvider,
+						apiKey: settings.apiKeys[settings.selectedProvider],
+						model: settings.model,
+						customUrl: settings.customUrls?.[settings.selectedProvider],
+					});
+					const title = await readStream(stream);
+					setConversationTitle(newConversationId, title.trim());
+				} catch (error) {
+					console.error("Failed to generate title:", error);
+				}
+			})();
+		} else {
+			addMessages([
+				userMessage,
+				{
+					id: crypto.randomUUID(),
+					role: "assistant" as const,
+					content: "",
+				},
+			]);
+		}
+
+		const history = [...currentMessages, userMessage];
+		const llmOptions = {
+			provider: settings.selectedProvider,
+			model: settings.model,
+			apiKey: settings.apiKeys[settings.selectedProvider],
+			attachments,
+			customUrl: settings.customUrls?.[settings.selectedProvider],
+		};
+		const context = { url: contextUrl, title: contextTitle, id: contextTabId };
+
+		if (useAgenticMode) {
+			runAgenticAgent(history, llmOptions, context, autonomousMode);
+		} else {
+			runAgent(history, llmOptions, context);
+		}
+		setInputValue("");
+	};
+
+	return (
+		<>
+			<div className="flex-1 flex flex-col p-4">
+				{/* Agentic Mode Toggle */}
+				<div className="mb-4 flex items-center justify-between">
+					<div className="flex items-center gap-2">
+						<label className="text-sm font-medium">Agentic Mode:</label>
+						<button
+							onClick={() => setUseAgenticMode(!useAgenticMode)}
+							className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
+								useAgenticMode
+									? "bg-blue-100 text-blue-800"
+									: "bg-gray-100 text-gray-600"
+							}`}
+						>
+							{useAgenticMode ? "ON" : "OFF"}
+						</button>
+					</div>
+				</div>
+
+				{/* Agentic Goal Panel */}
+				{useAgenticMode && (
+					<AgenticPanel
+						goal={currentGoal}
+						autonomousMode={autonomousMode}
+						onToggleAutonomous={toggleAutonomousMode}
+						onClearGoal={clearGoal}
+					/>
+				)}
+
+				{currentMessages.length === 0 && !(isLoading || isAgenticLoading) ? (
+					<EmptyState />
+				) : (
+					<div className="space-y-4">
+						{currentMessages
+							.filter((msg) => msg.role === "user" || msg.role === "assistant")
+							.map((message, index) => {
+								const chatMessage = {
+									id: message.id,
+									type: message.role as "user" | "assistant",
+									content: message.content,
+									toolCalls: message.toolCalls,
+									toolResults: message.toolResults,
+									attachments: message.attachments,
+								};
+
+								const isLastAssistantMessage =
+									message.role === "assistant" &&
+									index === currentMessages.length - 1;
+
+								return (
+									<div key={message.id}>
+										{isLastAssistantMessage &&
+											currentPlannerSteps.length > 0 && (
+												<PlannerPanel steps={currentPlannerSteps} />
+											)}
+										{!(isLastAssistantMessage && isLoading) && (
+											<ChatMessage message={chatMessage} />
+										)}
+									</div>
+								);
+							})}
+					</div>
+				)}
+			</div>
+
+			{(isLoading || isAgenticLoading) && (
+				<div className="text-gray-900 p-4">
+					<div className="flex items-center gap-2">
+						<span className="text-sm thinking-text">
+							{useAgenticMode && autonomousMode
+								? "🤖 Working autonomously..."
+								: currentPlannerSteps.length > 0 &&
+										currentPlannerSteps.some((s) => !s.isCompleted)
+									? "Executing tools..."
+									: "Thinking..."}
+						</span>
+					</div>
+				</div>
+			)}
+
+			{(error || agenticError) && (
+				<div className="px-4 py-3" role="alert">
+					<strong className="font-bold text-red-500">Error:</strong>
+					<span className="block sm:inline text-red-500">
+						{" "}
+						{error || agenticError}
+					</span>
+				</div>
+			)}
+
+			{validationError && (
+				<div className="px-4 py-3" role="alert">
+					<strong className="font-bold text-red-500">Error:</strong>
+					<span className="block sm:inline text-red-500">
+						{" "}
+						{validationError}
+					</span>
+				</div>
+			)}
+
+			<div ref={messagesEndRef} />
+			<div className="sticky bottom-0 left-0 right-0 z-50 p-4">
+				<div className="bg-gray-100 overflow-hidden rounded-2xl">
+					<ContextRibbon url={contextUrl} title={contextTitle} />
+					<PromptBox
+						prompt={inputValue}
+						isLoading={isLoading || isAgenticLoading}
+						setPrompt={setInputValue}
+						onSubmit={handleSubmit}
+						onStop={useAgenticMode ? stopAgenticAgent : stopAgent}
+					/>
+				</div>
+			</div>
+		</>
+	);
+};
+
+export default Chat;

@@ -1,0 +1,50 @@
+{
+	"manifest_version": 3,
+	"name": "BrowserEye",
+	"description": "A sidebar which gives you browser insights",
+	"version": "0.0.48",
+	"permissions": [
+		"sidePanel",
+		"storage",
+		"contextMenus",
+		"activeTab",
+		"scripting",
+		"webNavigation"
+	],
+	"host_permissions": [
+		"<all_urls>",
+		"http://localhost:*/*",
+		"http://127.0.0.1:*/*"
+	],
+	"background": {
+		"service_worker": "background.js",
+		"type": "module"
+	},
+	"content_scripts": [
+		{
+			"matches": ["<all_urls>"],
+			"js": ["content.js"],
+			"run_at": "document_idle"
+		}
+	],
+	"icons": {
+		"64": "icons/icon64.png",
+		"128": "icons/icon128.png",
+		"256": "icons/icon256.png",
+		"512": "icons/icon512.png"
+	},
+	"side_panel": {
+		"default_path": "sidebar.html"
+	},
+	"action": {
+		"default_title": "Use BrowserEye"
+	},
+	"commands": {
+		"open_sidebar": {
+			"suggested_key": {
+				"default": "Ctrl+Shift+U"
+			},
+			"description": "Open the BrowserEye sidebar"
+		}
+	}
+}
