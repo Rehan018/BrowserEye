@@ -128,17 +128,36 @@ export class WorkflowEngine {
       const startTime = Date.now();
       
       const tryClick = () => {
-        const element = document.querySelector(selector) as HTMLElement;
-        
-        if (element && element.offsetParent !== null) {
-          element.click();
-          resolve(true);
-          return;
-        }
-        
-        if (Date.now() - startTime < timeout) {
-          setTimeout(tryClick, 100);
-        } else {
+        try {
+          const element = document.querySelector(selector) as HTMLElement;
+          
+          if (element) {
+            // Check if element is visible and interactable
+            const rect = element.getBoundingClientRect();
+            const isVisible = rect.width > 0 && rect.height > 0 && 
+                            window.getComputedStyle(element).visibility !== 'hidden';
+            
+            if (isVisible) {
+              // Scroll element into view
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              
+              // Wait a bit for scroll to complete
+              setTimeout(() => {
+                element.click();
+                resolve(true);
+              }, 200);
+              return;
+            }
+          }
+          
+          if (Date.now() - startTime < timeout) {
+            setTimeout(tryClick, 200);
+          } else {
+            console.warn(`Click failed: Element not found or not visible: ${selector}`);
+            resolve(false);
+          }
+        } catch (error) {
+          console.error(`Click error for ${selector}:`, error);
           resolve(false);
         }
       };
@@ -152,20 +171,47 @@ export class WorkflowEngine {
       const startTime = Date.now();
       
       const tryType = () => {
-        const element = document.querySelector(selector) as HTMLInputElement;
-        
-        if (element && element.offsetParent !== null) {
-          element.focus();
-          element.value = this.replaceVariables(text);
-          element.dispatchEvent(new Event('input', { bubbles: true }));
-          element.dispatchEvent(new Event('change', { bubbles: true }));
-          resolve(true);
-          return;
-        }
-        
-        if (Date.now() - startTime < timeout) {
-          setTimeout(tryType, 100);
-        } else {
+        try {
+          const element = document.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement;
+          
+          if (element) {
+            const rect = element.getBoundingClientRect();
+            const isVisible = rect.width > 0 && rect.height > 0 && 
+                            window.getComputedStyle(element).visibility !== 'hidden';
+            
+            if (isVisible && !element.disabled && !element.readOnly) {
+              // Scroll into view
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              
+              setTimeout(() => {
+                element.focus();
+                
+                // Clear existing value
+                element.value = '';
+                
+                // Type the new value
+                const processedText = this.replaceVariables(text);
+                element.value = processedText;
+                
+                // Trigger events
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+                element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+                
+                resolve(true);
+              }, 200);
+              return;
+            }
+          }
+          
+          if (Date.now() - startTime < timeout) {
+            setTimeout(tryType, 200);
+          } else {
+            console.warn(`Type failed: Element not found or not editable: ${selector}`);
+            resolve(false);
+          }
+        } catch (error) {
+          console.error(`Type error for ${selector}:`, error);
           resolve(false);
         }
       };
@@ -182,33 +228,68 @@ export class WorkflowEngine {
 
   private async executeNavigate(url: string, timeout: number): Promise<boolean> {
     return new Promise((resolve) => {
-      const targetUrl = this.replaceVariables(url);
-      window.location.href = targetUrl;
-      
-      // Wait for navigation to complete
-      setTimeout(() => {
-        resolve(window.location.href.includes(targetUrl));
-      }, timeout);
+      try {
+        const targetUrl = this.replaceVariables(url);
+        
+        // Validate URL
+        if (!targetUrl || (!targetUrl.startsWith('http') && !targetUrl.startsWith('/'))) {
+          console.error(`Invalid URL: ${targetUrl}`);
+          resolve(false);
+          return;
+        }
+        
+        // Navigate
+        if (targetUrl.startsWith('/')) {
+          window.location.pathname = targetUrl;
+        } else {
+          window.location.href = targetUrl;
+        }
+        
+        // Wait for navigation
+        setTimeout(() => {
+          resolve(true);
+        }, Math.min(timeout, 3000));
+        
+      } catch (error) {
+        console.error(`Navigation error:`, error);
+        resolve(false);
+      }
     });
   }
 
   private async executeExtract(selector: string, variableName: string): Promise<boolean> {
-    const element = document.querySelector(selector);
-    
-    if (element) {
-      const value = element.textContent?.trim() || 
-                   (element as HTMLInputElement).value || 
-                   element.getAttribute('href') || 
-                   element.getAttribute('src');
+    try {
+      const element = document.querySelector(selector);
       
-      if (value) {
-        this.variables[variableName] = value;
-        this.extractedData[variableName] = value;
-        return true;
+      if (element) {
+        let value: string | null = null;
+        
+        // Try different extraction methods
+        if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+          value = (element as HTMLInputElement).value;
+        } else if (element.tagName === 'A') {
+          value = element.getAttribute('href') || element.textContent?.trim() || null;
+        } else if (element.tagName === 'IMG') {
+          value = element.getAttribute('src') || element.getAttribute('alt') || null;
+        } else {
+          value = element.textContent?.trim() || element.innerHTML?.trim() || null;
+        }
+        
+        if (value && value.length > 0) {
+          this.variables[variableName] = value;
+          this.extractedData[variableName] = value;
+          console.log(`Extracted ${variableName}: ${value}`);
+          return true;
+        }
       }
+      
+      console.warn(`Extract failed: No value found for selector ${selector}`);
+      return false;
+      
+    } catch (error) {
+      console.error(`Extract error for ${selector}:`, error);
+      return false;
     }
-    
-    return false;
   }
 
   private async executeCondition(condition: string): Promise<boolean> {

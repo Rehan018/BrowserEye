@@ -19,8 +19,26 @@ const sendMessageToBackground = (message: {
 
 export const browserHandlers = {
 	getCurrentTab: () => sendMessageToBackground({ type: "getCurrentTab" }),
-	getPageContent: (args: { selector?: string }) =>
-		sendMessageToBackground({ type: "getPageContent", data: args }),
+	getPageContent: async (args: { selector?: string }) => {
+		try {
+			// Direct content script call
+			const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+			if (tabs[0]?.id) {
+				const response = await chrome.tabs.sendMessage(tabs[0].id, {
+					type: "getPageContent",
+					data: args
+				});
+				if (response && !response.error) {
+					return response;
+				}
+			}
+		} catch (error) {
+			console.error('Direct content script call failed:', error);
+		}
+		
+		// Fallback to background method
+		return await sendMessageToBackground({ type: "getPageContent", data: args });
+	},
 	clickElement: (args: { selector: string }) =>
 		sendMessageToBackground({ type: "clickElement", data: args }),
 	fillInput: async (args: { selector: string; value: string }) => {

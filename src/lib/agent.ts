@@ -143,7 +143,7 @@ Before using tools, explain your reasoning and approach. When tool calls are nee
 		context?: any,
 	): Promise<ExtendedAgentResponse> {
 		if (context?.url) {
-			this.systemPrompt += `\n\n## CURRENT PAGE CONTEXT\n\nYou are currently on tab ID ${context.id}, titled "${context.title}" (${context.url})\n`;
+			this.systemPrompt += `\n\n## CURRENT PAGE CONTEXT\n\nYou are currently on tab ID ${context.id}, titled "${context.title}" (${context.url})\n\nIMPORTANT: You have full access to browser automation tools. When users ask you to navigate, click, or analyze page elements, use the available tools like getPageContent, clickElement, scrollToElement, etc. You CAN and SHOULD interact with the current page directly.\n`;
 		}
 
 		this.isStopped = false;

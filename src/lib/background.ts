@@ -19,6 +19,18 @@ new CrossTabManager();
 import { TaskQueue } from "./automation/task-queue";
 const taskQueue = new TaskQueue();
 
+// Initialize page watcher
+import { PageWatcher } from "./auto-analysis/page-watcher";
+const pageWatcher = new PageWatcher();
+
+// Initialize audit logger
+import { AuditLogger } from "./security/audit-logger";
+const auditLogger = new AuditLogger();
+
+// Initialize privacy manager
+import { PrivacyManager } from "./security/privacy-manager";
+const privacyManager = new PrivacyManager();
+
 // Combined message listener
 chrome.runtime.onMessage.addListener(
 	(
@@ -37,6 +49,39 @@ chrome.runtime.onMessage.addListener(
 		}
 
 		switch (type) {
+			case "GET_PAGE_ANALYSIS":
+				const analysis = pageWatcher.getPageAnalysis();
+				sendResponse({ analysis });
+				return true;
+
+			case "GET_CURRENT_PAGE_DATA":
+				const pageData = pageWatcher.getCurrentPageData();
+				sendResponse({ pageData });
+				return true;
+
+			case "LOG_AUDIT_EVENT":
+				auditLogger.logEvent(data.eventType, data.action, data.details);
+				sendResponse({ success: true });
+				return true;
+
+			case "GET_PRIVACY_SETTINGS":
+				privacyManager.getSettings().then(settings => {
+					sendResponse({ settings });
+				});
+				return true;
+
+			case "UPDATE_PRIVACY_SETTINGS":
+				privacyManager.updateSettings(data.settings).then(() => {
+					sendResponse({ success: true });
+				});
+				return true;
+
+			case "CLEANUP_OLD_DATA":
+				privacyManager.cleanupOldData().then(() => {
+					sendResponse({ success: true });
+				});
+				return true;
+
 			case "EXECUTE_WORKFLOW":
 				taskQueue.addTask({
 					type: 'workflow',

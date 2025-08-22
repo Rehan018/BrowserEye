@@ -204,6 +204,38 @@ const Settings = () => {
 				<SmartHighlighter />
 			</div>
 
+			{/* Privacy & Security Settings */}
+			<div className="mt-6 border-t border-gray-300 pt-4">
+				<h2 className="text-md font-bold mb-4">Privacy & Security</h2>
+				<div className="space-y-3">
+					<div className="space-y-2">
+						<div className="flex items-center justify-between p-3 border rounded-lg">
+							<div>
+								<span className="font-medium text-gray-700">Data Encryption</span>
+								<p className="text-sm text-gray-500">Encrypt sensitive data like API keys</p>
+							</div>
+							<span className="text-green-600 text-sm">✓ Enabled</span>
+						</div>
+						<div className="flex items-center justify-between p-3 border rounded-lg">
+							<div>
+								<span className="font-medium text-gray-700">Auto Cleanup</span>
+								<p className="text-sm text-gray-500">Remove old data automatically</p>
+							</div>
+							<span className="text-green-600 text-sm">✓ Enabled</span>
+						</div>
+						<div className="text-center pt-2">
+							<button
+								type="button"
+								onClick={() => window.open('#/dashboard', '_blank')}
+								className="text-blue-600 hover:text-blue-800 text-sm"
+							>
+								View Full Privacy Settings →
+							</button>
+						</div>
+					</div>
+				</div>
+			</div>
+
 			<div className="mt-6 border-t border-gray-300 pt-4">
 				<h2 className="text-md font-bold mb-2">Advanced Settings</h2>
 				<div className="flex items-center justify-between">

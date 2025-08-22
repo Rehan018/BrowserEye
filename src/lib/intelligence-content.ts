@@ -20,7 +20,7 @@ class IntelligenceContentManager {
           this.disableHighlighting();
           break;
         case 'GET_PAGE_CONTENT_FOR_ANALYSIS':
-          this.sendPageContentForAnalysis();
+          this.sendPageContentForAnalysis(_sendResponse);
           break;
       }
       return true;
@@ -118,20 +118,26 @@ class IntelligenceContentManager {
     document.head.appendChild(style);
   }
 
-  private sendPageContentForAnalysis(): void {
+  private sendPageContentForAnalysis(sendResponse?: (response: any) => void): void {
     const content = this.extractPageContent();
     const url = window.location.href;
     const title = document.title;
 
-    chrome.runtime.sendMessage({
-      type: 'PAGE_CONTENT_EXTRACTED',
-      data: {
-        content,
-        url,
-        title,
-        timestamp: new Date().toISOString()
-      }
-    });
+    const data = {
+      content,
+      url,
+      title,
+      timestamp: new Date().toISOString()
+    };
+
+    if (sendResponse) {
+      sendResponse({ success: true, ...data });
+    } else {
+      chrome.runtime.sendMessage({
+        type: 'PAGE_CONTENT_EXTRACTED',
+        data
+      });
+    }
   }
 
   private extractPageContent(): string {

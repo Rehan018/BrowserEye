@@ -131,6 +131,17 @@ const Chat = () => {
 		}
 		setValidationError(null);
 
+		// Get current page analysis for context
+		let pageContext = '';
+		try {
+			const response = await chrome.runtime.sendMessage({ type: 'GET_PAGE_ANALYSIS' });
+			if (response?.analysis) {
+				pageContext = `\n\nCurrent page context: ${response.analysis}`;
+			}
+		} catch (error) {
+			console.log('No page analysis available');
+		}
+
 		setCurrentPlannerSteps([]);
 
 		const attachments = await Promise.all(
@@ -148,7 +159,7 @@ const Chat = () => {
 		const userMessage = {
 			id: crypto.randomUUID(),
 			role: "user" as const,
-			content: inputValue,
+			content: inputValue + pageContext,
 			attachments,
 		};
 
@@ -322,30 +333,30 @@ Title:`;
 	};
 
 	return (
-		<>
-			<div className="flex-1 flex flex-col p-4">
+		<div className="flex flex-col h-full">
+			{/* Messages Area */}
+			<div className="flex-1 overflow-y-auto p-4 space-y-4">
 				{/* Agentic Mode Toggle */}
-				<div className="mb-4 flex items-center justify-between">
-					<div className="flex items-center gap-2">
-						<label htmlFor="agentic-mode" className="text-sm font-medium">Agentic Mode:</label>
-						<button
-						id="agentic-mode"
+				<div className="flex items-center justify-between bg-white rounded-lg p-3 border">
+					<span className="text-sm font-medium text-gray-700">Agentic Mode</span>
+					<button
 						type="button"
-							onClick={() => setUseAgenticMode(!useAgenticMode)}
-							className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-								useAgenticMode
-									? "bg-blue-100 text-blue-800"
-									: "bg-gray-100 text-gray-600"
+						onClick={() => setUseAgenticMode(!useAgenticMode)}
+						className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+							useAgenticMode ? "bg-blue-600" : "bg-gray-200"
+						}`}
+					>
+						<span
+							className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+								useAgenticMode ? "translate-x-6" : "translate-x-1"
 							}`}
-						>
-							{useAgenticMode ? "ON" : "OFF"}
-						</button>
-					</div>
+						/>
+					</button>
 				</div>
 
-				{/* Agentic Goal Panel */}
+				{/* Agentic Panels */}
 				{useAgenticMode && (
-					<>
+					<div className="space-y-4">
 						<AgenticPanel
 							goal={currentGoal}
 							autonomousMode={autonomousMode}
@@ -353,7 +364,6 @@ Title:`;
 							onClearGoal={clearGoal}
 						/>
 						<DynamicAgentPanel onGoalUpdate={(goal) => {
-							// Update the agentic agent's current goal
 							agenticAgent.setCurrentGoal({
 								id: crypto.randomUUID(),
 								objective: goal,
@@ -364,9 +374,10 @@ Title:`;
 								subTasks: []
 							});
 						}} />
-					</>
+					</div>
 				)}
 
+				{/* Chat Messages */}
 				{currentMessages.length === 0 && !(isLoading || isAgenticLoading) ? (
 					<EmptyState />
 				) : (
@@ -401,12 +412,12 @@ Title:`;
 							})}
 					</div>
 				)}
-			</div>
 
-			{(isLoading || isAgenticLoading) && (
-				<div className="text-gray-900 p-4">
-					<div className="flex items-center gap-2">
-						<span className="text-sm thinking-text">
+				{/* Loading State */}
+				{(isLoading || isAgenticLoading) && (
+					<div className="flex items-center gap-2 p-4 bg-blue-50 rounded-lg">
+						<div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+						<span className="text-sm text-blue-700">
 							{useAgenticMode && autonomousMode
 								? "🤖 Working autonomously..."
 								: currentPlannerSteps.length > 0 &&
@@ -415,32 +426,33 @@ Title:`;
 									: "Thinking..."}
 						</span>
 					</div>
-				</div>
-			)}
+				)}
 
-			{(error || agenticError) && (
-				<div className="px-4 py-3" role="alert">
-					<strong className="font-bold text-red-500">Error:</strong>
-					<span className="block sm:inline text-red-500">
-						{" "}
-						{error || agenticError}
-					</span>
-				</div>
-			)}
+				{/* Error States */}
+				{(error || agenticError) && (
+					<div className="p-4 bg-red-50 border border-red-200 rounded-lg">
+						<div className="flex items-center gap-2">
+							<span className="text-red-600 font-medium">Error:</span>
+							<span className="text-red-700">{error || agenticError}</span>
+						</div>
+					</div>
+				)}
 
-			{validationError && (
-				<div className="px-4 py-3" role="alert">
-					<strong className="font-bold text-red-500">Error:</strong>
-					<span className="block sm:inline text-red-500">
-						{" "}
-						{validationError}
-					</span>
-				</div>
-			)}
+				{validationError && (
+					<div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+						<div className="flex items-center gap-2">
+							<span className="text-yellow-600 font-medium">Warning:</span>
+							<span className="text-yellow-700">{validationError}</span>
+						</div>
+					</div>
+				)}
 
-			<div ref={messagesEndRef} />
-			<div className="sticky bottom-0 left-0 right-0 z-50 p-4">
-				<div className="bg-gray-100 overflow-hidden rounded-2xl">
+				<div ref={messagesEndRef} />
+			</div>
+
+			{/* Input Area */}
+			<div className="border-t bg-white p-4">
+				<div className="bg-gray-50 rounded-xl overflow-hidden">
 					<ContextRibbon url={contextUrl} title={contextTitle} />
 					<PromptBox
 						prompt={inputValue}
@@ -451,7 +463,7 @@ Title:`;
 					/>
 				</div>
 			</div>
-		</>
+		</div>
 	);
 };
 

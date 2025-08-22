@@ -1,14 +1,16 @@
 import { useState } from 'react';
-import { Bot, List, Settings } from 'lucide-react';
+import { Bot, List, Settings, Eye } from 'lucide-react';
 import { WorkflowBuilder } from '../components/automation/WorkflowBuilder';
 import { TaskMonitor } from '../components/automation/TaskMonitor';
+import { ElementInspector } from '../components/automation/ElementInspector';
 
 const Automation = () => {
-  const [activeTab, setActiveTab] = useState<'builder' | 'monitor' | 'settings'>('builder');
+  const [activeTab, setActiveTab] = useState<'builder' | 'monitor' | 'inspector' | 'settings'>('builder');
 
   const tabs = [
     { id: 'builder', label: 'Workflow Builder', icon: Bot },
     { id: 'monitor', label: 'Task Monitor', icon: List },
+    { id: 'inspector', label: 'Element Inspector', icon: Eye },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
 
@@ -42,6 +44,7 @@ const Automation = () => {
       <div className="flex-1 overflow-hidden">
         {activeTab === 'builder' && <WorkflowBuilder />}
         {activeTab === 'monitor' && <TaskMonitor />}
+        {activeTab === 'inspector' && <ElementInspector />}
         {activeTab === 'settings' && (
           <div className="p-4">
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">

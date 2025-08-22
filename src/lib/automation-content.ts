@@ -14,6 +14,9 @@ class AutomationContentManager {
   private setupMessageListener(): void {
     chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       switch (message.type) {
+        case 'PING':
+          sendResponse({ success: true, message: 'Automation content script ready' });
+          break;
         case 'DETECT_ELEMENTS':
           this.handleDetectElements(sendResponse);
           break;
@@ -97,20 +100,41 @@ class AutomationContentManager {
 
   private async clickElement(selector: string): Promise<boolean> {
     return new Promise((resolve) => {
-      const element = document.querySelector(selector) as HTMLElement;
-      
-      if (element && element.offsetParent !== null) {
-        // Scroll element into view
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      try {
+        const element = document.querySelector(selector) as HTMLElement;
         
-        // Add visual feedback
-        this.highlightElement(element);
-        
-        setTimeout(() => {
-          element.click();
-          resolve(true);
-        }, 500);
-      } else {
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          const isVisible = rect.width > 0 && rect.height > 0 && 
+                          window.getComputedStyle(element).visibility !== 'hidden' &&
+                          window.getComputedStyle(element).display !== 'none';
+          
+          if (isVisible) {
+            // Scroll element into view
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Add visual feedback
+            this.highlightElement(element);
+            
+            setTimeout(() => {
+              try {
+                element.click();
+                resolve(true);
+              } catch (clickError) {
+                console.error('Click failed:', clickError);
+                resolve(false);
+              }
+            }, 300);
+          } else {
+            console.warn(`Element not visible: ${selector}`);
+            resolve(false);
+          }
+        } else {
+          console.warn(`Element not found: ${selector}`);
+          resolve(false);
+        }
+      } catch (error) {
+        console.error(`Click element error:`, error);
         resolve(false);
       }
     });
@@ -118,37 +142,84 @@ class AutomationContentManager {
 
   private async typeText(selector: string, text: string): Promise<boolean> {
     return new Promise((resolve) => {
-      const element = document.querySelector(selector) as HTMLInputElement;
-      
-      if (element && element.offsetParent !== null) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        this.highlightElement(element);
+      try {
+        const element = document.querySelector(selector) as HTMLInputElement | HTMLTextAreaElement;
         
-        setTimeout(() => {
-          element.focus();
-          element.value = text;
-          element.dispatchEvent(new Event('input', { bubbles: true }));
-          element.dispatchEvent(new Event('change', { bubbles: true }));
-          resolve(true);
-        }, 500);
-      } else {
+        if (element) {
+          const rect = element.getBoundingClientRect();
+          const isVisible = rect.width > 0 && rect.height > 0 && 
+                          window.getComputedStyle(element).visibility !== 'hidden' &&
+                          window.getComputedStyle(element).display !== 'none';
+          
+          if (isVisible && !element.disabled && !element.readOnly) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            this.highlightElement(element);
+            
+            setTimeout(() => {
+              try {
+                element.focus();
+                element.value = '';
+                element.value = text;
+                
+                // Trigger multiple events for better compatibility
+                element.dispatchEvent(new Event('focus', { bubbles: true }));
+                element.dispatchEvent(new Event('input', { bubbles: true }));
+                element.dispatchEvent(new Event('change', { bubbles: true }));
+                element.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true }));
+                
+                resolve(true);
+              } catch (typeError) {
+                console.error('Type failed:', typeError);
+                resolve(false);
+              }
+            }, 300);
+          } else {
+            console.warn(`Element not editable: ${selector}`);
+            resolve(false);
+          }
+        } else {
+          console.warn(`Input element not found: ${selector}`);
+          resolve(false);
+        }
+      } catch (error) {
+        console.error(`Type text error:`, error);
         resolve(false);
       }
     });
   }
 
   private async extractText(selector: string): Promise<string | null> {
-    const element = document.querySelector(selector);
-    
-    if (element) {
-      return element.textContent?.trim() || 
-             (element as HTMLInputElement).value || 
-             element.getAttribute('href') || 
-             element.getAttribute('src') || 
-             null;
+    try {
+      const element = document.querySelector(selector);
+      
+      if (element) {
+        // Highlight the element being extracted
+        this.highlightElement(element as HTMLElement);
+        
+        let value: string | null = null;
+        
+        // Try different extraction methods based on element type
+        if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+          value = (element as HTMLInputElement).value;
+        } else if (element.tagName === 'A') {
+          value = element.getAttribute('href') || element.textContent?.trim() || null;
+        } else if (element.tagName === 'IMG') {
+          value = element.getAttribute('src') || element.getAttribute('alt') || null;
+        } else if (element.tagName === 'SELECT') {
+          const select = element as HTMLSelectElement;
+          value = select.options[select.selectedIndex]?.text || select.value;
+        } else {
+          value = element.textContent?.trim() || element.getAttribute('data-value') || null;
+        }
+        
+        return value && value.length > 0 ? value : null;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`Extract text error:`, error);
+      return null;
     }
-    
-    return null;
   }
 
   private highlightElement(element: HTMLElement): void {

@@ -93,14 +93,41 @@ export class ElementDetector {
 
   private generateSelector(element: HTMLElement): string {
     // Try ID first
-    if (element.id) {
+    if (element.id && /^[a-zA-Z][\w-]*$/.test(element.id)) {
       return `#${element.id}`;
     }
 
+    // Try name attribute for form elements
+    if (element.getAttribute('name')) {
+      const name = element.getAttribute('name')!;
+      const nameSelector = `${element.tagName.toLowerCase()}[name="${name}"]`;
+      if (document.querySelectorAll(nameSelector).length === 1) {
+        return nameSelector;
+      }
+    }
+
+    // Try data-testid or similar test attributes
+    const testAttrs = ['data-testid', 'data-test', 'data-cy', 'data-qa'];
+    for (const attr of testAttrs) {
+      const value = element.getAttribute(attr);
+      if (value) {
+        return `[${attr}="${value}"]`;
+      }
+    }
+
     // Try unique class combination
-    if (element.className) {
-      const classes = element.className.split(' ').filter(c => c.trim());
+    if (element.className && typeof element.className === 'string') {
+      const classes = element.className.split(' ').filter(c => c.trim() && !c.includes(' '));
       if (classes.length > 0) {
+        // Try single class first
+        for (const cls of classes) {
+          const classSelector = `.${cls}`;
+          if (document.querySelectorAll(classSelector).length === 1) {
+            return classSelector;
+          }
+        }
+        
+        // Try combination of classes
         const classSelector = '.' + classes.join('.');
         if (document.querySelectorAll(classSelector).length === 1) {
           return classSelector;
@@ -108,24 +135,42 @@ export class ElementDetector {
       }
     }
 
-    // Try data attributes
-    const dataAttrs = Array.from(element.attributes)
-      .filter(attr => attr.name.startsWith('data-'))
-      .map(attr => `[${attr.name}="${attr.value}"]`);
-    
-    if (dataAttrs.length > 0) {
-      const dataSelector = element.tagName.toLowerCase() + dataAttrs[0];
-      if (document.querySelectorAll(dataSelector).length === 1) {
-        return dataSelector;
+    // Try aria-label
+    const ariaLabel = element.getAttribute('aria-label');
+    if (ariaLabel) {
+      const ariaSelector = `${element.tagName.toLowerCase()}[aria-label="${ariaLabel}"]`;
+      if (document.querySelectorAll(ariaSelector).length === 1) {
+        return ariaSelector;
       }
     }
 
-    // Fallback to nth-child
+    // Try text content for buttons and links
+    if (['BUTTON', 'A'].includes(element.tagName) && element.textContent) {
+      const text = element.textContent.trim();
+      if (text.length > 0 && text.length < 50) {
+        return `${element.tagName.toLowerCase()}[text="${text}"]`;
+      }
+    }
+
+    // Fallback to nth-child with more context
     const parent = element.parentElement;
     if (parent) {
-      const siblings = Array.from(parent.children);
+      const siblings = Array.from(parent.children).filter(el => el.tagName === element.tagName);
       const index = siblings.indexOf(element) + 1;
-      return `${parent.tagName.toLowerCase()} > ${element.tagName.toLowerCase()}:nth-child(${index})`;
+      
+      let parentSelector = '';
+      if (parent.id) {
+        parentSelector = `#${parent.id}`;
+      } else if (parent.className) {
+        const parentClasses = parent.className.split(' ').filter(c => c.trim())[0];
+        if (parentClasses) {
+          parentSelector = `.${parentClasses}`;
+        }
+      }
+      
+      if (parentSelector) {
+        return `${parentSelector} > ${element.tagName.toLowerCase()}:nth-of-type(${index})`;
+      }
     }
 
     return element.tagName.toLowerCase();

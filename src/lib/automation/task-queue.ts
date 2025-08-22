@@ -131,33 +131,48 @@ export class TaskQueue {
   }
 
   private async runTask(task: Task): Promise<any> {
-    switch (task.type) {
-      case 'workflow':
-        return await this.executeWorkflow(task.payload);
-      
-      case 'action':
-        return await this.executeAction(task.payload);
-      
-      case 'scrape':
-        return await this.executeScrape(task.payload);
-      
-      case 'monitor':
-        return await this.executeMonitor(task.payload);
-      
-      default:
-        throw new Error(`Unknown task type: ${task.type}`);
+    try {
+      switch (task.type) {
+        case 'workflow':
+          return await this.executeWorkflow(task.payload);
+        
+        case 'action':
+          return await this.executeAction(task.payload);
+        
+        case 'scrape':
+          return await this.executeScrape(task.payload);
+        
+        case 'monitor':
+          return await this.executeMonitor(task.payload);
+        
+        default:
+          throw new Error(`Unknown task type: ${task.type}`);
+      }
+    } catch (error) {
+      console.error(`Task execution failed for ${task.id}:`, error);
+      throw error;
     }
   }
 
   private async executeWorkflow(payload: any): Promise<any> {
-    // Send message to content script to execute workflow
     return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Workflow execution timeout'));
+      }, 30000);
+      
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]?.id) {
           chrome.tabs.sendMessage(tabs[0].id, {
             type: 'EXECUTE_WORKFLOW',
-            payload
+            workflow: payload
           }, (response) => {
+            clearTimeout(timeout);
+            
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+            
             if (response?.success) {
               resolve(response.result);
             } else {
@@ -165,6 +180,7 @@ export class TaskQueue {
             }
           });
         } else {
+          clearTimeout(timeout);
           reject(new Error('No active tab found'));
         }
       });
@@ -172,14 +188,24 @@ export class TaskQueue {
   }
 
   private async executeAction(payload: any): Promise<any> {
-    // Send message to content script to execute single action
     return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Action execution timeout'));
+      }, 10000);
+      
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]?.id) {
           chrome.tabs.sendMessage(tabs[0].id, {
             type: 'EXECUTE_ACTION',
             payload
           }, (response) => {
+            clearTimeout(timeout);
+            
+            if (chrome.runtime.lastError) {
+              reject(new Error(chrome.runtime.lastError.message));
+              return;
+            }
+            
             if (response?.success) {
               resolve(response.result);
             } else {
@@ -187,6 +213,7 @@ export class TaskQueue {
             }
           });
         } else {
+          clearTimeout(timeout);
           reject(new Error('No active tab found'));
         }
       });
