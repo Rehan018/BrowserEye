@@ -1,4 +1,4 @@
-import { ArrowLeft, History, Plus, Settings2Icon } from "lucide-react";
+import { ArrowLeft, History, Plus, Settings2Icon, Bot } from "lucide-react";
 import { useViewContext } from "../contexts/ViewContext";
 import { useConversationStore } from "../lib/store";
 
@@ -43,6 +43,14 @@ export default function SidebarHeader() {
 						onClick={() => setView("history")}
 					>
 						<History className="w-4 h-4 text-gray-600" strokeWidth={2.25} />
+					</button>
+					<button
+						type="button"
+						className="flex items-center justify-center group p-1 rounded-sm hover:bg-gray-200 transition-colors"
+						title="Automation"
+						onClick={() => setView("automation")}
+					>
+						<Bot className="w-4 h-4 text-gray-600" strokeWidth={2.25} />
 					</button>
 					<button
 						type="button"

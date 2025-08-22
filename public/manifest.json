@@ -24,7 +24,7 @@
 	"content_scripts": [
 		{
 			"matches": ["<all_urls>"],
-			"js": ["content.js", "search-content.js", "intelligence-content.js"],
+			"js": ["content.js", "search-content.js", "intelligence-content.js", "automation-content.js"],
 			"run_at": "document_idle"
 		}
 	],

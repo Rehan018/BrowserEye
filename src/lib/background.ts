@@ -15,6 +15,10 @@ const searchManager = new SearchManager();
 import { CrossTabManager } from "./memory/cross-tab-manager";
 new CrossTabManager();
 
+// Initialize task queue
+import { TaskQueue } from "./automation/task-queue";
+const taskQueue = new TaskQueue();
+
 // Combined message listener
 chrome.runtime.onMessage.addListener(
 	(
@@ -33,6 +37,27 @@ chrome.runtime.onMessage.addListener(
 		}
 
 		switch (type) {
+			case "EXECUTE_WORKFLOW":
+				taskQueue.addTask({
+					type: 'workflow',
+					priority: 'medium',
+					payload: data.workflow,
+					maxRetries: 1,
+					timeout: 30000
+				});
+				sendResponse({ success: true });
+				return true;
+
+			case "GET_QUEUE_STATUS":
+				const status = taskQueue.getQueueStatus();
+				sendResponse(status);
+				return true;
+
+			case "CANCEL_TASK":
+				const cancelled = taskQueue.cancelTask(data.taskId);
+				sendResponse({ success: cancelled });
+				return true;
+
 			case "TOGGLE_SEARCH_INTERCEPTION":
 				if (data.enabled) {
 					searchManager.enable();

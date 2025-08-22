@@ -6,7 +6,7 @@ import { TabContextProvider } from "./contexts/TabContext";
 import { ViewProvider } from "./contexts/ViewContext";
 import { useView } from "./hooks/useView";
 
-export type View = "chat" | "history" | "settings";
+export type View = "chat" | "history" | "automation" | "settings";
 
 const AppContent = () => {
 	const CurrentView = useView();

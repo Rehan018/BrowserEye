@@ -17,6 +17,7 @@ export default defineConfig({
 				content: "./src/lib/content.ts",
 				"search-content": "./src/lib/search-content.ts",
 				"intelligence-content": "./src/lib/intelligence-content.ts",
+				"automation-content": "./src/lib/automation-content.ts",
 			},
 			output: {
 				entryFileNames: (chunkInfo) => {
@@ -31,6 +32,9 @@ export default defineConfig({
 					}
 					if (chunkInfo.name === "intelligence-content") {
 						return "intelligence-content.js";
+					}
+					if (chunkInfo.name === "automation-content") {
+						return "automation-content.js";
 					}
 					return "[name].js";
 				},
@@ -54,6 +58,10 @@ export default defineConfig({
 						const intelligenceScript = bundle["intelligence-content.js"];
 						if (intelligenceScript && intelligenceScript.type === "chunk") {
 							intelligenceScript.code = `(function() {\n'use strict';\n${intelligenceScript.code}\n})();`;
+						}
+						const automationScript = bundle["automation-content.js"];
+						if (automationScript && automationScript.type === "chunk") {
+							automationScript.code = `(function() {\n'use strict';\n${automationScript.code}\n})();`;
 						}
 					},
 				},
