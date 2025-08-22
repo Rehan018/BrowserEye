@@ -1,153 +1,124 @@
 import { useState } from 'react';
-import { X, Search, ExternalLink, Copy, Check } from 'lucide-react';
-import type { AISearchResponse, SearchQuery } from '../../lib/search/search-interceptor';
+import { ChevronDown, ChevronUp, ExternalLink, RefreshCw } from 'lucide-react';
+import type { SynthesizedAnswer } from '../../lib/search-interception/answer-synthesizer';
 
 interface SearchOverlayProps {
-  query: SearchQuery;
-  response: AISearchResponse | null;
-  isLoading: boolean;
-  onClose: () => void;
-  onRetry: () => void;
+  answer: SynthesizedAnswer;
+  query: string;
+  onToggleOriginal: () => void;
+  showOriginal: boolean;
+  isLoading?: boolean;
 }
 
-export const SearchOverlay = ({ query, response, isLoading, onClose, onRetry }: SearchOverlayProps) => {
-  const [copied, setCopied] = useState(false);
+export const SearchOverlay = ({ 
+  answer, 
+  query, 
+  onToggleOriginal, 
+  showOriginal,
+  isLoading = false 
+}: SearchOverlayProps) => {
+  const [showCitations, setShowCitations] = useState(false);
 
-  const handleCopy = async () => {
-    if (response?.answer) {
-      await navigator.clipboard.writeText(response.answer);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
-  };
-
-  const handleSourceClick = (url: string) => {
-    chrome.tabs.create({ url });
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-3">
-            <Search className="w-5 h-5 text-blue-600" />
-            <div>
-              <h2 className="font-semibold text-gray-900">AI Search Results</h2>
-              <p className="text-sm text-gray-600">"{query.query}"</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="overflow-y-auto max-h-[calc(90vh-80px)]">
-          {/* Loading State */}
-          {isLoading && (
-            <div className="p-8 text-center">
-              <div className="animate-spin w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-600">Analyzing sources and generating comprehensive answer...</p>
-            </div>
-          )}
-
-          {/* AI Response */}
-          {response && !isLoading && (
-            <div className="p-6 space-y-6">
-              {/* Answer Section */}
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-blue-900">AI-Generated Answer</h3>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
-                      Confidence: {Math.round(response.confidence * 100)}%
-                    </span>
-                    <button
-                      onClick={handleCopy}
-                      className="p-1 hover:bg-blue-100 rounded"
-                    >
-                      {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-blue-600" />}
-                    </button>
-                  </div>
-                </div>
-                <div className="prose prose-sm max-w-none text-gray-800">
-                  {response.answer.split('\n').map((paragraph, index) => (
-                    <p key={index} className="mb-2 last:mb-0">
-                      {paragraph}
-                    </p>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sources Section */}
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-3">
-                  Sources ({response.sources.length})
-                </h3>
-                <div className="grid gap-3">
-                  {response.sources.map((source, index) => (
-                    <div
-                      key={index}
-                      className="border rounded-lg p-3 hover:bg-gray-50 cursor-pointer"
-                      onClick={() => handleSourceClick(source.url)}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded">
-                              [{index + 1}]
-                            </span>
-                            <h4 className="font-medium text-gray-900 text-sm line-clamp-1">
-                              {source.title}
-                            </h4>
-                          </div>
-                          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                            {source.snippet}
-                          </p>
-                          <p className="text-xs text-gray-500">{source.source}</p>
-                        </div>
-                        <ExternalLink className="w-4 h-4 text-gray-400 ml-2 flex-shrink-0" />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center justify-between pt-4 border-t">
-                <button
-                  onClick={onRetry}
-                  className="px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-                >
-                  Regenerate Answer
-                </button>
-                <button
-                  onClick={() => handleSourceClick(`https://www.google.com/search?q=${encodeURIComponent(query.query)}`)}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-gray-700"
-                >
-                  View Original Results
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Error State */}
-          {!response && !isLoading && (
-            <div className="p-8 text-center">
-              <p className="text-gray-600 mb-4">Failed to generate AI response</p>
-              <button
-                onClick={onRetry}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-              >
-                Try Again
-              </button>
-            </div>
-          )}
+  if (isLoading) {
+    return (
+      <div className="bg-white border rounded-lg p-6 mb-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <RefreshCw className="w-5 h-5 animate-spin text-blue-600" />
+          <span className="text-gray-700">Generating AI answer for "{query}"...</span>
         </div>
       </div>
+    );
+  }
+
+  return (
+    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-4 shadow-sm">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+            <span className="text-white text-sm font-bold">AI</span>
+          </div>
+          <span className="font-semibold text-gray-900">AI Answer</span>
+          <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+            {answer.confidence}% confidence
+          </span>
+        </div>
+        
+        <button
+          onClick={onToggleOriginal}
+          className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+        >
+          {showOriginal ? 'Hide' : 'Show'} original results
+          {showOriginal ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+      </div>
+
+      {/* Answer */}
+      <div className="prose prose-sm max-w-none mb-4">
+        <p className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+          {answer.answer}
+        </p>
+      </div>
+
+      {/* Citations Toggle */}
+      {answer.citations.length > 0 && (
+        <div className="mb-4">
+          <button
+            onClick={() => setShowCitations(!showCitations)}
+            className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
+          >
+            Sources ({answer.citations.length})
+            {showCitations ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+          
+          {showCitations && (
+            <div className="mt-3 space-y-2">
+              {answer.citations.map(citation => (
+                <div key={citation.id} className="bg-white p-3 rounded border text-sm">
+                  <div className="flex items-start gap-2">
+                    <span className="bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded text-xs font-medium">
+                      {citation.id}
+                    </span>
+                    <div className="flex-1">
+                      <a
+                        href={citation.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1"
+                      >
+                        {citation.title}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                      <p className="text-gray-600 mt-1">{citation.snippet}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Follow-up Questions */}
+      {answer.followUpQuestions.length > 0 && (
+        <div>
+          <h4 className="text-sm font-medium text-gray-700 mb-2">Related questions:</h4>
+          <div className="flex flex-wrap gap-2">
+            {answer.followUpQuestions.map((question, index) => (
+              <button
+                key={index}
+                onClick={() => {
+                  // Trigger new search
+                  window.location.href = `https://www.google.com/search?q=${encodeURIComponent(question)}`;
+                }}
+                className="text-sm bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 px-3 py-1.5 rounded-full transition-colors"
+              >
+                {question}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

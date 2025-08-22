@@ -1,99 +1,42 @@
-import { createRoot } from 'react-dom/client';
-import { SearchOverlay } from '../components/search/SearchOverlay';
-import type { SearchQuery, AISearchResponse } from './search/search-interceptor';
+import { SearchInterceptor } from './search-interception/search-interceptor';
 
 class SearchContentManager {
-  private overlayContainer: HTMLDivElement | null = null;
-  private root: any = null;
-  private currentQuery: SearchQuery | null = null;
-  private currentResponse: AISearchResponse | null = null;
-  private isLoading = false;
+  private interceptor: SearchInterceptor | null = null;
 
   constructor() {
-    this.setupMessageListener();
+    this.init();
   }
 
-  private setupMessageListener(): void {
-    chrome.runtime.onMessage.addListener((message, _sender, _sendResponse) => {
-      if (message.type === 'SHOW_SEARCH_OVERLAY') {
-        this.handleShowOverlay(message.data);
+  private init(): void {
+    // Check if search interception is enabled
+    chrome.storage.sync.get(['searchInterceptionEnabled'], (result) => {
+      if (result.searchInterceptionEnabled !== false) { // Default to enabled
+        this.startInterception();
       }
-      return true;
+    });
+
+    // Listen for settings changes
+    chrome.storage.onChanged.addListener((changes) => {
+      if (changes.searchInterceptionEnabled) {
+        if (changes.searchInterceptionEnabled.newValue) {
+          this.startInterception();
+        } else {
+          this.stopInterception();
+        }
+      }
     });
   }
 
-  private handleShowOverlay(data: any): void {
-    const { query, response, loading, error } = data;
-    
-    this.currentQuery = query;
-    this.currentResponse = response || null;
-    this.isLoading = loading || false;
-
-    if (error) {
-      this.currentResponse = null;
-      this.isLoading = false;
+  private startInterception(): void {
+    if (!this.interceptor) {
+      this.interceptor = new SearchInterceptor();
     }
-
-    this.showOverlay();
   }
 
-  private showOverlay(): void {
-    if (!this.currentQuery) return;
-
-    // Create overlay container if it doesn't exist
-    if (!this.overlayContainer) {
-      this.overlayContainer = document.createElement('div');
-      this.overlayContainer.id = 'browsereye-search-overlay';
-      this.overlayContainer.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 2147483647;
-        pointer-events: auto;
-      `;
-      document.body.appendChild(this.overlayContainer);
-
-      // Create React root
-      this.root = createRoot(this.overlayContainer);
-    }
-
-    // Render the overlay
-    this.root.render(
-      SearchOverlay({
-        query: this.currentQuery,
-        response: this.currentResponse,
-        isLoading: this.isLoading,
-        onClose: () => this.hideOverlay(),
-        onRetry: () => this.retrySearch()
-      })
-    );
-  }
-
-  private hideOverlay(): void {
-    if (this.overlayContainer) {
-      this.overlayContainer.remove();
-      this.overlayContainer = null;
-      this.root = null;
-    }
-    
-    this.currentQuery = null;
-    this.currentResponse = null;
-    this.isLoading = false;
-  }
-
-  private retrySearch(): void {
-    if (this.currentQuery) {
-      this.isLoading = true;
-      this.currentResponse = null;
-      this.showOverlay();
-      
-      // Trigger new search
-      chrome.runtime.sendMessage({
-        type: 'SEARCH_INTERCEPTED',
-        data: this.currentQuery
-      });
+  private stopInterception(): void {
+    if (this.interceptor) {
+      this.interceptor.destroy();
+      this.interceptor = null;
     }
   }
 }

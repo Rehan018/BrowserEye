@@ -29,6 +29,72 @@ class AutomationContentManager {
         case 'FIND_ELEMENT':
           this.handleFindElement(message.description, sendResponse);
           break;
+        // Advanced element interaction
+        case 'GET_ELEMENT_ATTRIBUTES':
+          this.handleGetElementAttributes(message.data, sendResponse);
+          break;
+        case 'SET_ELEMENT_ATTRIBUTES':
+          this.handleSetElementAttributes(message.data, sendResponse);
+          break;
+        case 'GET_ELEMENT_STYLE':
+          this.handleGetElementStyle(message.data, sendResponse);
+          break;
+        case 'SET_ELEMENT_STYLE':
+          this.handleSetElementStyle(message.data, sendResponse);
+          break;
+        case 'GET_ELEMENT_POSITION':
+          this.handleGetElementPosition(message.data, sendResponse);
+          break;
+        case 'HOVER_ELEMENT':
+          this.handleHoverElement(message.data, sendResponse);
+          break;
+        case 'RIGHT_CLICK_ELEMENT':
+          this.handleRightClickElement(message.data, sendResponse);
+          break;
+        case 'DRAG_AND_DROP_ELEMENT':
+          this.handleDragAndDropElement(message.data, sendResponse);
+          break;
+        case 'CLEAR_INPUT':
+          this.handleClearInput(message.data, sendResponse);
+          break;
+        // Content manipulation
+        case 'EXTRACT_TABLE_DATA':
+          this.handleExtractTableData(message.data, sendResponse);
+          break;
+        case 'EXTRACT_LINKS':
+          this.handleExtractLinks(message.data, sendResponse);
+          break;
+        case 'READ_LOCAL_STORAGE':
+          this.handleReadLocalStorage(message.data, sendResponse);
+          break;
+        case 'WRITE_LOCAL_STORAGE':
+          this.handleWriteLocalStorage(message.data, sendResponse);
+          break;
+        case 'READ_SESSION_STORAGE':
+          this.handleReadSessionStorage(message.data, sendResponse);
+          break;
+        case 'WRITE_SESSION_STORAGE':
+          this.handleWriteSessionStorage(message.data, sendResponse);
+          break;
+        case 'GET_COOKIES':
+          this.handleGetCookies(message.data, sendResponse);
+          break;
+        case 'SET_COOKIES':
+          this.handleSetCookies(message.data, sendResponse);
+          break;
+        // Control flow
+        case 'ELEMENT_EXISTS':
+          this.handleElementExists(message.data, sendResponse);
+          break;
+        case 'ELEMENT_IS_VISIBLE':
+          this.handleElementIsVisible(message.data, sendResponse);
+          break;
+        case 'WAIT_FOR_ELEMENT':
+          this.handleWaitForElement(message.data, sendResponse);
+          break;
+        case 'EXECUTE_JAVASCRIPT':
+          this.handleExecuteJavaScript(message.data, sendResponse);
+          break;
       }
       return true;
     });
@@ -235,6 +301,394 @@ class AutomationContentManager {
     setTimeout(() => {
       element.style.cssText = originalStyle;
     }, 2000);
+  }
+
+  // Advanced element interaction handlers
+  private handleGetElementAttributes(data: { selector: string }, sendResponse: (response: any) => void): void {
+    try {
+      const element = document.querySelector(data.selector);
+      if (!element) {
+        sendResponse({ success: false, error: 'Element not found' });
+        return;
+      }
+      
+      const attributes: Record<string, string> = {};
+      for (const attr of element.attributes) {
+        attributes[attr.name] = attr.value;
+      }
+      
+      sendResponse({ success: true, attributes });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleSetElementAttributes(data: { selector: string; attributes: Record<string, string> }, sendResponse: (response: any) => void): void {
+    try {
+      const element = document.querySelector(data.selector);
+      if (!element) {
+        sendResponse({ success: false, error: 'Element not found' });
+        return;
+      }
+      
+      Object.entries(data.attributes).forEach(([name, value]) => {
+        element.setAttribute(name, value);
+      });
+      
+      sendResponse({ success: true, message: 'Attributes set successfully' });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleGetElementStyle(data: { selector: string; property?: string }, sendResponse: (response: any) => void): void {
+    try {
+      const element = document.querySelector(data.selector) as HTMLElement;
+      if (!element) {
+        sendResponse({ success: false, error: 'Element not found' });
+        return;
+      }
+      
+      const computedStyle = window.getComputedStyle(element);
+      
+      if (data.property) {
+        const value = computedStyle.getPropertyValue(data.property);
+        sendResponse({ success: true, style: { [data.property]: value } });
+      } else {
+        const allStyles: Record<string, string> = {};
+        for (let i = 0; i < computedStyle.length; i++) {
+          const prop = computedStyle[i];
+          allStyles[prop] = computedStyle.getPropertyValue(prop);
+        }
+        sendResponse({ success: true, style: allStyles });
+      }
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleSetElementStyle(data: { selector: string; styles: Record<string, string> }, sendResponse: (response: any) => void): void {
+    try {
+      const element = document.querySelector(data.selector) as HTMLElement;
+      if (!element) {
+        sendResponse({ success: false, error: 'Element not found' });
+        return;
+      }
+      
+      Object.entries(data.styles).forEach(([property, value]) => {
+        element.style.setProperty(property, value);
+      });
+      
+      sendResponse({ success: true, message: 'Styles set successfully' });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleGetElementPosition(data: { selector: string }, sendResponse: (response: any) => void): void {
+    try {
+      const element = document.querySelector(data.selector) as HTMLElement;
+      if (!element) {
+        sendResponse({ success: false, error: 'Element not found' });
+        return;
+      }
+      
+      const rect = element.getBoundingClientRect();
+      const position = {
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height,
+        top: rect.top,
+        left: rect.left,
+        right: rect.right,
+        bottom: rect.bottom
+      };
+      
+      sendResponse({ success: true, position });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleHoverElement(data: { selector: string }, sendResponse: (response: any) => void): void {
+    try {
+      const element = document.querySelector(data.selector) as HTMLElement;
+      if (!element) {
+        sendResponse({ success: false, error: 'Element not found' });
+        return;
+      }
+      
+      const mouseEnterEvent = new MouseEvent('mouseenter', { bubbles: true, cancelable: true });
+      const mouseOverEvent = new MouseEvent('mouseover', { bubbles: true, cancelable: true });
+      
+      element.dispatchEvent(mouseEnterEvent);
+      element.dispatchEvent(mouseOverEvent);
+      
+      sendResponse({ success: true, message: 'Element hovered successfully' });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleRightClickElement(data: { selector: string }, sendResponse: (response: any) => void): void {
+    try {
+      const element = document.querySelector(data.selector) as HTMLElement;
+      if (!element) {
+        sendResponse({ success: false, error: 'Element not found' });
+        return;
+      }
+      
+      const contextMenuEvent = new MouseEvent('contextmenu', {
+        bubbles: true,
+        cancelable: true,
+        button: 2
+      });
+      
+      element.dispatchEvent(contextMenuEvent);
+      
+      sendResponse({ success: true, message: 'Right-click performed successfully' });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleDragAndDropElement(data: { sourceSelector: string; targetSelector: string }, sendResponse: (response: any) => void): void {
+    try {
+      const sourceElement = document.querySelector(data.sourceSelector) as HTMLElement;
+      const targetElement = document.querySelector(data.targetSelector) as HTMLElement;
+      
+      if (!sourceElement || !targetElement) {
+        sendResponse({ success: false, error: 'Source or target element not found' });
+        return;
+      }
+      
+      // Create drag events
+      const dragStartEvent = new DragEvent('dragstart', { bubbles: true, cancelable: true });
+      const dragOverEvent = new DragEvent('dragover', { bubbles: true, cancelable: true });
+      const dropEvent = new DragEvent('drop', { bubbles: true, cancelable: true });
+      const dragEndEvent = new DragEvent('dragend', { bubbles: true, cancelable: true });
+      
+      sourceElement.dispatchEvent(dragStartEvent);
+      targetElement.dispatchEvent(dragOverEvent);
+      targetElement.dispatchEvent(dropEvent);
+      sourceElement.dispatchEvent(dragEndEvent);
+      
+      sendResponse({ success: true, message: 'Drag and drop performed successfully' });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleClearInput(data: { selector: string }, sendResponse: (response: any) => void): void {
+    try {
+      const element = document.querySelector(data.selector) as HTMLInputElement | HTMLTextAreaElement;
+      if (!element) {
+        sendResponse({ success: false, error: 'Input element not found' });
+        return;
+      }
+      
+      element.value = '';
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+      
+      sendResponse({ success: true, message: 'Input cleared successfully' });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  // Content manipulation handlers
+  private handleExtractTableData(data: { selector: string }, sendResponse: (response: any) => void): void {
+    try {
+      const table = document.querySelector(data.selector) as HTMLTableElement;
+      if (!table) {
+        sendResponse({ success: false, error: 'Table not found' });
+        return;
+      }
+      
+      const rows = Array.from(table.rows);
+      const tableData = rows.map(row => 
+        Array.from(row.cells).map(cell => cell.textContent?.trim() || '')
+      );
+      
+      sendResponse({ success: true, data: tableData });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleExtractLinks(data: { selector?: string }, sendResponse: (response: any) => void): void {
+    try {
+      const container = data.selector ? document.querySelector(data.selector) : document;
+      if (!container) {
+        sendResponse({ success: false, error: 'Container not found' });
+        return;
+      }
+      
+      const links = Array.from(container.querySelectorAll('a[href]')).map(link => ({
+        href: (link as HTMLAnchorElement).href,
+        text: link.textContent?.trim() || '',
+        title: link.getAttribute('title') || ''
+      }));
+      
+      sendResponse({ success: true, links });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleReadLocalStorage(data: { key?: string }, sendResponse: (response: any) => void): void {
+    try {
+      if (data.key) {
+        const value = localStorage.getItem(data.key);
+        sendResponse({ success: true, value });
+      } else {
+        const allData: Record<string, string> = {};
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key) {
+            allData[key] = localStorage.getItem(key) || '';
+          }
+        }
+        sendResponse({ success: true, data: allData });
+      }
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleWriteLocalStorage(data: { key: string; value: string }, sendResponse: (response: any) => void): void {
+    try {
+      localStorage.setItem(data.key, data.value);
+      sendResponse({ success: true, message: 'Data stored successfully' });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleReadSessionStorage(data: { key?: string }, sendResponse: (response: any) => void): void {
+    try {
+      if (data.key) {
+        const value = sessionStorage.getItem(data.key);
+        sendResponse({ success: true, value });
+      } else {
+        const allData: Record<string, string> = {};
+        for (let i = 0; i < sessionStorage.length; i++) {
+          const key = sessionStorage.key(i);
+          if (key) {
+            allData[key] = sessionStorage.getItem(key) || '';
+          }
+        }
+        sendResponse({ success: true, data: allData });
+      }
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleWriteSessionStorage(data: { key: string; value: string }, sendResponse: (response: any) => void): void {
+    try {
+      sessionStorage.setItem(data.key, data.value);
+      sendResponse({ success: true, message: 'Data stored successfully' });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleGetCookies(data: { name?: string }, sendResponse: (response: any) => void): void {
+    try {
+      const cookies = document.cookie.split(';').reduce((acc, cookie) => {
+        const [name, value] = cookie.trim().split('=');
+        if (name && value) {
+          acc[name] = decodeURIComponent(value);
+        }
+        return acc;
+      }, {} as Record<string, string>);
+      
+      if (data.name) {
+        sendResponse({ success: true, value: cookies[data.name] || null });
+      } else {
+        sendResponse({ success: true, cookies });
+      }
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleSetCookies(data: { name: string; value: string; expires?: string }, sendResponse: (response: any) => void): void {
+    try {
+      let cookieString = `${data.name}=${encodeURIComponent(data.value)}`;
+      if (data.expires) {
+        cookieString += `; expires=${data.expires}`;
+      }
+      document.cookie = cookieString;
+      sendResponse({ success: true, message: 'Cookie set successfully' });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  // Control flow handlers
+  private handleElementExists(data: { selector: string }, sendResponse: (response: any) => void): void {
+    try {
+      const exists = document.querySelector(data.selector) !== null;
+      sendResponse({ success: true, exists });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleElementIsVisible(data: { selector: string }, sendResponse: (response: any) => void): void {
+    try {
+      const element = document.querySelector(data.selector) as HTMLElement;
+      if (!element) {
+        sendResponse({ success: true, visible: false });
+        return;
+      }
+      
+      const rect = element.getBoundingClientRect();
+      const style = window.getComputedStyle(element);
+      const visible = rect.width > 0 && rect.height > 0 && 
+                     style.visibility !== 'hidden' && 
+                     style.display !== 'none' &&
+                     style.opacity !== '0';
+      
+      sendResponse({ success: true, visible });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
+  }
+
+  private handleWaitForElement(data: { selector: string; timeout?: number }, sendResponse: (response: any) => void): void {
+    const timeout = data.timeout || 10000;
+    const startTime = Date.now();
+    
+    const checkElement = () => {
+      const element = document.querySelector(data.selector);
+      if (element) {
+        sendResponse({ success: true, found: true });
+        return;
+      }
+      
+      if (Date.now() - startTime > timeout) {
+        sendResponse({ success: false, error: 'Element not found within timeout' });
+        return;
+      }
+      
+      setTimeout(checkElement, 100);
+    };
+    
+    checkElement();
+  }
+
+  private handleExecuteJavaScript(data: { code: string }, sendResponse: (response: any) => void): void {
+    try {
+      const result = eval(data.code);
+      sendResponse({ success: true, result });
+    } catch (error) {
+      sendResponse({ success: false, error: (error as Error).message });
+    }
   }
 }
 

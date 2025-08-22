@@ -1,14 +1,23 @@
 import { Agent } from './agent';
 import { browserTools } from './browser-tools';
 import { browserHandlers } from './browser-handlers';
+import { advancedBrowserTools } from './browser-tools-advanced';
+import { advancedBrowserHandlers } from './browser-handlers-advanced';
+import { contentManipulationTools } from './browser-tools-content';
+import { controlFlowTools } from './browser-tools-control';
 import type { AppSettings } from '../types';
 
 let agentInstance: Agent | null = null;
 
 export function createAgentInstance(_settings: AppSettings): Agent {
   agentInstance = new Agent({
-    tools: Object.values(browserTools),
-    toolHandlers: browserHandlers,
+    tools: [
+      ...Object.values(browserTools), 
+      ...Object.values(advancedBrowserTools),
+      ...Object.values(contentManipulationTools),
+      ...Object.values(controlFlowTools)
+    ],
+    toolHandlers: { ...browserHandlers, ...advancedBrowserHandlers },
     systemPrompt: "You are BrowserEye, an AI-powered browser automation assistant.",
     maxIterations: 10,
   });

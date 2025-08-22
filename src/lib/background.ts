@@ -103,6 +103,16 @@ chrome.runtime.onMessage.addListener(
 				sendResponse({ success: cancelled });
 				return true;
 
+			case "SEARCH_GOOGLE":
+				// Simple fallback search results
+				sendResponse({ 
+					results: [
+						{ title: 'Search result 1', snippet: 'Sample snippet', url: '#', relevance: 1.0 },
+						{ title: 'Search result 2', snippet: 'Sample snippet', url: '#', relevance: 0.9 }
+					]
+				});
+				return true;
+
 			case "TOGGLE_SEARCH_INTERCEPTION":
 				if (data.enabled) {
 					searchManager.enable();
